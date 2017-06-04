@@ -1,0 +1,26 @@
+{
+  "default":{
+    "1":{
+      "name":"first item",
+      "id":12331,
+      "content":"content of the first item"
+    },
+    "2":{
+      "name":"second item",
+      "id":12312313,
+      "content":"content of the second item"
+    }
+  },
+  "events":{
+    "1":{
+      "name":"first event",
+      "description":"description of first event",
+      "id":1231
+    },
+    "2":{
+      "name":"second event",
+      "description":"description of the second event",
+      "id":1899
+    }
+  }
+}
