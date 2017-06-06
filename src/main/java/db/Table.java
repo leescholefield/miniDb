@@ -9,7 +9,8 @@ import java.util.Iterator;
  * Represents a single table in a {@link JsonDatabase}. In practice this class acts as a simple wrapper around a
  * {@code JSONObject}, providing methods for inserting items and querying contents.
  * <p>
- * This class is designed for internal use only and it is not a part of the libraries public API.
+ * This class is just to reduce the size of the {@code JsonDatabase} class and is designed for internal use only.
+ * It is not a part of the libraries public API.
  * <p>
  * A table will be in the format:
  * <pre>
@@ -44,13 +45,21 @@ class Table {
     }
 
     /**
-     * Gets the value associated with the specified key as a {@code String}, or {@code null} if there is no such key.
+     * Returns the value associated with the specified key as a {@code String}, or {@code null} if the associated value is
+     * null.
+     *
+     * @throws IllegalArgumentException if there is no such key.
      */
-    String getValue(String key) {
+    String getValue(String key) throws IllegalArgumentException {
         try {
-            return jsonRoot.getString(key);
+            String value = jsonRoot.getString(key);
+
+            if (value.equals("null"))
+                return null;
+
+            return value;
         } catch (JSONException e) {
-            return null;
+            throw new IllegalArgumentException("Key: " + key + " not found.");
         }
     }
 
