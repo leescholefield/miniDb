@@ -11,7 +11,10 @@ import java.util.Map;
 import static org.junit.Assert.*;
 
 /**
- * Tests the {@link JsonDatabase} class
+ * Tests the {@link JsonDatabase} class.
+ * <p>
+ * Warning, running most of these tests will create a temporary file in the 'test/data' directory. Even if the test fails
+ * these files should automatically be deleted, if the delete fails an warning will show.
  */
 public class JsonDatabaseTest {
 
@@ -43,7 +46,6 @@ public class JsonDatabaseTest {
     /**
      * Tests whether the {@link JsonDatabase#create(String)} constructor method will successfully create a new file.
      * <p>
-     * Warning, running this test will create a new .json file in the test/data directory, which will then be deleted.
      */
     @Test
     public void createFileTest() throws Exception {
@@ -65,8 +67,6 @@ public class JsonDatabaseTest {
 
     /**
      * Tests the {@link JsonDatabase#append(String, Map)} method.
-     * <p>
-     * Warning, running this test will create a new .json file in the test/data directory, which will then be deleted.
      */
     @Test
     public void appendTest() throws Exception {
@@ -91,9 +91,7 @@ public class JsonDatabaseTest {
     }
 
     /**
-     * Tests the {@link JsonDatabase#dropTable(String)} method.
-     * <p>
-     * Warning, running this method will create a new .json file in the test/data directory, which will then be deleted.
+     * Tests the {@link JsonDatabase#dropTable(String)} method..
      */
     @Test
     public void dropTableTest() throws Exception {
@@ -118,8 +116,6 @@ public class JsonDatabaseTest {
 
     /**
      * Tests the {@link JsonDatabase#getTable(String)} method.
-     * <p>
-     * Warning, running this method will create a new .json file in the test/data directory, which will then be deleted.
      */
     @Test
     public void getTableTest() throws Exception {
@@ -141,8 +137,6 @@ public class JsonDatabaseTest {
 
     /**
      * Tests the {@link JsonDatabase#delete(String, String)} method.
-     * <p>
-     * Warning, running this method will create a new .json file in the test/data directory, which will then be deleted.
      */
     @Test
     public void deleteTest() throws Exception {
@@ -165,8 +159,6 @@ public class JsonDatabaseTest {
 
     /**
      * Tests the {@link JsonDatabase#newTable(String, Map)} method.
-     * <p>
-     * Warning, running this method will create a new .json file in the test/data directory, which will then be deleted.
      */
     @Test
     public void newTableTest() throws Exception {
@@ -193,8 +185,6 @@ public class JsonDatabaseTest {
 
     /**
      * Tests the {@link JsonDatabase#newTable(String, Map)} method will null values.
-     * <p>
-     * Warning, running this method will create a new .json file in the test/data directory, which will then be deleted.
      */
     @Test
     public void newTableTestNullValues() throws Exception {
@@ -230,6 +220,46 @@ public class JsonDatabaseTest {
         // delete file even if test fails
         finally {
             Utils.deleteFile(file, "JsonDatabaseTest.newTableTestThrows()");
+        }
+
+    }
+
+    /**
+     * Tests the {@link JsonDatabase#appendValueToTable(String, int, String, Object)} method with a string object.
+     */
+    @Test
+    public void appendValueToTableTest() throws Exception {
+        File file = Utils.createFile("src/test/data/append_value.json",
+                "{\"default\":{\"1\": {\"hello\":\"world\"}}}");
+
+        JsonDatabase db = new JsonDatabase(file);
+
+        String expected = "{\"default\":{\"1\":{\"test\":\"new value\",\"hello\":\"world\"}}}";
+
+        try {
+            db.appendValueToTable("default", 1, "test", "new value");
+            assertEquals(expected, db.toString());
+        }
+        finally {
+            Utils.deleteFile(file, "JsonDatabaseTest.appendValueToTableTest");
+        }
+    }
+
+    /**
+     * Tests the {@link JsonDatabase#appendValueToTable(String, int, String, Object)} with an invalid {@code fileName}.
+     */
+    @Test
+    public void appendValueToTableInvalid() throws Exception {
+        File file = Utils.createFile("src/test/data/append_value_invalid.json",
+                "{\"default\":{}}");
+        JsonDatabase db = new JsonDatabase(file);
+
+        try {
+        expected.expect(IllegalArgumentException.class);
+
+        db.appendValueToTable("invalid", 1, "test", "testing");
+        } finally {
+            Utils.deleteFile(file, "JsonDatabaseTest.appendValueToTableInvalid()");
         }
 
     }
