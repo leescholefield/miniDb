@@ -1,7 +1,8 @@
 package db;
 
-import org.json.JSONObject;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.File;
 
@@ -13,6 +14,8 @@ import static org.junit.Assert.*;
 public class TableTest {
 
     private Table table = new JsonDatabase("src/test/data/test_data.json").getTable("default");
+    @Rule
+    public ExpectedException expected = ExpectedException.none();
 
     /**
      * Tests the {@link Table#getValue(String)} method.
@@ -36,11 +39,31 @@ public class TableTest {
     }
 
     /**
-     * Tests that an invalid key passed to {@link Table#getValue(String)} will return null.
+     * Tests that an invalid key passed to {@link Table#getValue(String)} will throw an {@code IllegalArgumentException}.
      */
     @Test
     public void testGetValueInvalidKey() throws Exception {
-        assertNull(table.getValue("invalid"));
+        expected.expect(IllegalArgumentException.class);
+
+        table.getValue("invalid_key");
+    }
+
+    /**
+     * Tests that {@link Table#getValue(String)} will return {@code null} when the associated value is null.
+     */
+    @Test
+    public void testGetValueNull() throws Exception {
+        File file = Utils.createFile("src/test/data/table_test.json", "{\"default\": {\"name\":null}}");
+        JsonDatabase db = new JsonDatabase(file);
+
+        Table table = db.getTable("default");
+
+        try {
+            assertNull(table.getValue("name"));
+        }
+        finally {
+            Utils.deleteFile(file, "TableTest.testGetValueNull()");
+        }
     }
 
     /**
