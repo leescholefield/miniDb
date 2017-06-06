@@ -169,6 +169,47 @@ public class JsonDatabase {
     }
 
     /**
+     * Appends the {@code value} to the table matching the given tableName.
+     *
+     * @param tableName name of table to append to.
+     * @param valueKey key to save value under
+     * @param value value to save
+     *
+     * @throws IllegalArgumentException if the table doesn't exist, or the value is already saved.
+     */
+    public void appendValueToTable(String tableName, int id, String valueKey, Object value) throws IOException,
+            IllegalArgumentException {
+
+        JSONObject table = rootObject.optJSONObject(tableName);
+        if (table == null) {
+            throw new IllegalArgumentException("Could not find table matching the name " + tableName);
+        }
+
+        JSONObject entry = table.optJSONObject(String.valueOf(id));
+        if (entry == null) {
+            throw new IllegalArgumentException("No entry found matching the id " + String.valueOf(id));
+        }
+
+        if (entry.has(valueKey)) {
+            throw new IllegalArgumentException("A key with the name " + valueKey + " already exists");
+        } else {
+            try {
+                entry.put(valueKey, value);
+            } catch (JSONException e) {
+                throw new ParsingException("Could not append the value to the jsonobject");
+            }
+        }
+
+        // save to file
+        try {
+            fileHelper.write(rootObject.toString());
+        } catch (IOException e) {
+            throw new IOException("Could not write contents to file", e);
+        }
+
+    }
+
+    /**
      * Creates a new table with the given {@code name} and the {@code initialValues}, if any were given.
      *
      * @throws IOException if it could not write to the file.
