@@ -1,10 +1,12 @@
 package db;
 
+import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,250 +20,174 @@ import static org.junit.Assert.*;
  */
 public class JsonDatabaseTest {
 
+    private static final String TEST_FILE_PATH = "src/test/data/temp_test_file.json";
+
     private JsonDatabase db = new JsonDatabase("src/test/data/test_data.json");
 
     @Rule
     public ExpectedException expected = ExpectedException.none();
 
-    /**
-     * Tests {@link JsonDatabase#tableNames()}
-     */
+    @After
+    public void deleteFile() throws Exception {
+        File file = new File(TEST_FILE_PATH);
+        if (file.exists()) {
+            Utils.deleteFile(file, "JsonDatabaseTest");
+        }
+    }
+
     @Test
-    public void testTableNames() throws Exception {
+    public void tableNames_returns_all_tables() throws Exception {
         String[] tables = db.tableNames();
         String[] expected = new String[] {"default", "events"};
 
         assertArrayEquals(expected, tables);
     }
 
-    /**
-     * Tests {@link JsonDatabase#tableExists(String)}.
-     */
     @Test
-    public void testTableExists() throws Exception {
-        assertEquals(true, db.tableExists("default"));
-        assertEquals(false, db.tableExists("not_exists"));
+    public void tableExists_returns_true_when_table_exists() throws Exception {
+        assertTrue(db.tableExists("default"));
     }
 
-    /**
-     * Tests whether the {@link JsonDatabase#create(String)} constructor method will successfully create a new file.
-     * <p>
-     */
     @Test
-    public void createFileTest() throws Exception {
-        String path = "src/test/data/temp.json";
-
-        JsonDatabase.create(path);
-
-        File file = new File(path);
-
-        try {
-            assertTrue(file.exists());
-        }
-        // delete file even if test fails
-        finally {
-            Utils.deleteFile(file, "JsonDatabaseTest.createFileTest()");
-        }
-
+    public void tableExists_returns_false_when_tables_does_not_exist() throws Exception {
+        assertFalse(db.tableExists("not_exist"));
     }
 
-    /**
-     * Tests the {@link JsonDatabase#append(String, Map)} method.
-     */
     @Test
-    public void appendTest() throws Exception {
-        String tempFilePath = "src/test/data/append_data.json";
+    public void create_successfully_creates_file() throws Exception {
+        JsonDatabase.create(TEST_FILE_PATH);
 
-        Map<String, Object> content = new HashMap<>();
-        content.put("super_name", "wolverine");
-        content.put("name", "logan");
+        File file = new File(TEST_FILE_PATH);
 
-        JsonDatabase db = JsonDatabase.create(tempFilePath);
+        assertTrue(file.exists());
+    }
+
+    @Test
+    public void append_successfully_appends_data_to_file() throws Exception {
+        JsonDatabase db = createNewDbFile(TEST_FILE_PATH);
+
+        Map<String, Object> content = createValuesMap();
         db.append("default", content);
 
-        String expected = "{\"default\":{\"1\":{\"name\":\"logan\",\"super_name\":\"wolverine\"}}}";
+        String expected = "{\"default\":{\"1\":{\"first key\":\"first value\",\"second key\":\"second value\"}}}";
 
-        try {
-            assertEquals(expected, db.toString());
-        }
-        // deleted file even if test fails
-        finally {
-            Utils.deleteFile(tempFilePath, "JsonDatabaseTest.appendTest()");
-        }
+        assertEquals(expected, db.toString());
     }
 
-    /**
-     * Tests the {@link JsonDatabase#dropTable(String)} method..
-     */
     @Test
-    public void dropTableTest() throws Exception {
+    public void dropTable_successfully_deletes_table() throws Exception {
         String contents = "{\"default\": {}, \"delete\": {} }";
-        File file = Utils.createFile("src/test/data/drop_table.json", contents);
-
-        JsonDatabase db = new JsonDatabase(file);
+        Utils.createFile(TEST_FILE_PATH, contents);
+        JsonDatabase db = new JsonDatabase(TEST_FILE_PATH);
 
         db.dropTable("delete");
 
         String expected = "{\"default\":{}}";
 
-        try {
-            assertEquals(expected, db.toString());
-        }
-        // delete file even if test fails.
-        finally {
-            Utils.deleteFile(file, "JsonDatabaseTest.dropTableTest()");
-        }
-
+        assertEquals(expected, db.toString());
     }
 
-    /**
-     * Tests the {@link JsonDatabase#getTable(String)} method.
-     */
     @Test
-    public void getTableTest() throws Exception {
-        File file = Utils.createFile("src/test/data/get_table.json", "{\"default\": {\"name\":\"hello\"}}");
+    public void dropTable_throws_exception_if_table_does_not_exist() throws Exception {
+        JsonDatabase db = createNewDbFile(TEST_FILE_PATH);
+
+        expected.expect(IllegalArgumentException.class);
+
+        db.dropTable("not exist");
+    }
+
+    @Test
+    public void getTable_successfully_returns_table() throws Exception {
+        File file = Utils.createFile(TEST_FILE_PATH, "{\"default\": {\"name\":\"hello\"}}");
         JsonDatabase db = new JsonDatabase(file);
 
         Table table = db.getTable("default");
 
         String expected = "{\"name\":\"hello\"}";
 
-        try {
-            assertEquals(expected, table.toString());
-        }
-        // delete file even if test fails
-        finally {
-            Utils.deleteFile(file, "JsonDatabaseTest.getTableTest()");
-        }
+        assertEquals(expected, table.toString());
     }
 
-    /**
-     * Tests the {@link JsonDatabase#delete(String, String)} method.
-     */
     @Test
-    public void deleteTest() throws Exception {
-        File file = Utils.createFile("src/test/data/delete_test.json",
-                "{\"default\": {\"2\": {\"name\":\"test\"} } }");
+    public void getTable_throws_exception_when_table_does_not_exist() throws Exception {
+        expected.expect(IllegalArgumentException.class);
+
+        db.getTable("not exist");
+    }
+
+    @Test
+    public void delete_successfully_deletes_item() throws Exception {
+        File file = Utils.createFile(TEST_FILE_PATH, "{\"default\": {\"2\": {\"name\":\"test\"} } }");
         JsonDatabase db = new JsonDatabase(file);
 
         db.delete("2", "default");
 
-
-        try {
-            assertFalse(db.tableExists("2"));
-        }
-        // delete file even if test fails
-        finally {
-            Utils.deleteFile(file, "JsonDatabaseTest.deleteTest()");
-        }
-
+        assertFalse(db.tableExists("2"));
     }
 
-    /**
-     * Tests the {@link JsonDatabase#newTable(String, Map)} method.
-     */
     @Test
-    public void newTableTest() throws Exception {
-        File file = Utils.createFile("src/test/data/table_test.json",
-                "{\"default\": {}}");
+    public void newTable_creates_new_table_with_given_values() throws Exception {
+        File file = Utils.createFile(TEST_FILE_PATH, "{\"default\": {}}");
         JsonDatabase db = new JsonDatabase(file);
 
-        Map<String, Object> values = new HashMap<>();
-        values.put("hello", "world");
-        values.put("number", 42);
+        db.newTable("test", createValuesMap());
 
-        db.newTable("test", values);
+        String expected = "{\"default\":{},\"test\":{\"first key\":\"first value\",\"second key\":\"second value\"}}";
 
-        String expected = "{\"default\":{},\"test\":{\"number\":42,\"hello\":\"world\"}}";
+        assertEquals(expected, db.toString());
 
-        try {
-            assertEquals(expected, db.toString());
-        }
-        // delete file even if test fails
-        finally {
-            Utils.deleteFile(file, "JsonDatabaseTest.newTableTest()");
-        }
     }
 
-    /**
-     * Tests the {@link JsonDatabase#newTable(String, Map)} method will null values.
-     */
     @Test
-    public void newTableTestNullValues() throws Exception {
-        File file = Utils.createFile("src/test/data/table_test.json",
-                "{\"default\": {}}");
+    public void newTable_creates_new_table_when_given_null_values() throws Exception {
+        File file = Utils.createFile(TEST_FILE_PATH, "{\"default\": {}}");
         JsonDatabase db = new JsonDatabase(file);
 
         db.newTable("test", null);
 
-        try {
-            assertTrue(db.tableExists("test"));
-        }
-        // delete file even if test fails
-        finally {
-            Utils.deleteFile(file, "JsonDatabaseTest.newTableTestNullValues()");
-        }
+        assertTrue(db.tableExists("test"));
     }
 
-    /**
-     * Tests {@link JsonDatabase#newTable(String, Map)} with an already existing table name.
-     */
     @Test
-    public void newTableTestThrows() throws Exception {
-        File file = Utils.createFile("src/test/data/table_throws_test.json",
-                "{\"default\":{}}");
+    public void newTable_throws_exception_if_table_already_exists() throws Exception {
+        File file = Utils.createFile(TEST_FILE_PATH, "{\"default\":{}}");
         JsonDatabase db = new JsonDatabase(file);
 
         expected.expect(IllegalArgumentException.class);
 
-        try {
-            db.newTable("default", null);
-        }
-        // delete file even if test fails
-        finally {
-            Utils.deleteFile(file, "JsonDatabaseTest.newTableTestThrows()");
-        }
-
+        db.newTable("default", null);
     }
 
-    /**
-     * Tests the {@link JsonDatabase#appendValueToTable(String, int, String, Object)} method with a string object.
-     */
     @Test
-    public void appendValueToTableTest() throws Exception {
-        File file = Utils.createFile("src/test/data/append_value.json",
-                "{\"default\":{\"1\": {\"hello\":\"world\"}}}");
-
+    public void appendValueToTable_successfully_appends_string() throws Exception {
+        File file = Utils.createFile(TEST_FILE_PATH, "{\"default\":{\"1\": {\"hello\":\"world\"}}}");
         JsonDatabase db = new JsonDatabase(file);
 
         String expected = "{\"default\":{\"1\":{\"test\":\"new value\",\"hello\":\"world\"}}}";
+        db.appendValueToTable("default", 1, "test", "new value");
 
-        try {
-            db.appendValueToTable("default", 1, "test", "new value");
-            assertEquals(expected, db.toString());
-        }
-        finally {
-            Utils.deleteFile(file, "JsonDatabaseTest.appendValueToTableTest");
-        }
+        assertEquals(expected, db.toString());
     }
 
-    /**
-     * Tests the {@link JsonDatabase#appendValueToTable(String, int, String, Object)} with an invalid {@code fileName}.
-     */
     @Test
-    public void appendValueToTableInvalid() throws Exception {
-        File file = Utils.createFile("src/test/data/append_value_invalid.json",
-                "{\"default\":{}}");
+    public void appendValueToTable_throws_exception_when_table_does_not_exist() throws Exception {
+        File file = Utils.createFile(TEST_FILE_PATH, "{\"default\":{}}");
         JsonDatabase db = new JsonDatabase(file);
 
-        try {
         expected.expect(IllegalArgumentException.class);
 
         db.appendValueToTable("invalid", 1, "test", "testing");
-        } finally {
-            Utils.deleteFile(file, "JsonDatabaseTest.appendValueToTableInvalid()");
-        }
+    }
 
+    private JsonDatabase createNewDbFile(String path) throws IOException {
+        return JsonDatabase.create(path);
+    }
+
+    private Map<String, Object> createValuesMap() {
+        Map<String, Object> map = new HashMap<>();
+        map.put("first key", "first value");
+        map.put("second key", "second value");
+        return map;
     }
 
 
